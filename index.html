@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Conectar MetaMask e Adicionar USDT</title>
+  <script>
+    async function conectarMetamask() {
+      if (typeof window.ethereum !== 'undefined') {
+        try {
+          // Tentar trocar de rede
+          await ethereum.request({
+            method: 'wallet_switchEthereumChain',
+            params: [{ chainId: '0x1' }] // Ethereum Mainnet
+          });
+        } catch (switchError) {
+          if (switchError.code === 4902) {
+            try {
+              // Se a rede não existir, adiciona com o RPC customizado
+              await ethereum.request({
+                method: 'wallet_addEthereumChain',
+                params: [{
+                  chainId: '0x1',
+                  chainName: 'Ethereum (Tenderly Virtual)',
+                  rpcUrls: ['https://virtual.mainnet.rpc.tenderly.co/e6b2c73e-b8e6-40bd-bad5-e0e1c1e83c71'],
+                  nativeCurrency: {
+                    name: 'Ether',
+                    symbol: 'ETH',
+                    decimals: 18
+                  },
+                  blockExplorerUrls: ['https://etherscan.io']
+                }]
+              });
+            } catch (addError) {
+              console.error(addError);
+              alert("Erro ao adicionar rede: " + addError.message);
+              return;
+            }
+          } else {
+            console.error(switchError);
+            alert("Erro ao trocar rede: " + switchError.message);
+            return;
+          }
+        }
+
+        // Agora tenta adicionar o token USDT
+        try {
+          const wasAdded = await ethereum.request({
+            method: 'wallet_watchAsset',
+            params: {
+              type: 'ERC20',
+              options: {
+                address: '0xdAC17F958D2ee523a2206206994597C13D831ec7', // contrato USDT oficial
+                symbol: 'USDT',
+                decimals: 6,
+                image: 'https://cryptologos.cc/logos/tether-usdt-logo.png'
+              }
+            }
+          });
+
+          if (wasAdded) {
+            alert('Token USDT adicionado com sucesso!');
+          } else {
+            alert('O usuário rejeitou adicionar o token.');
+          }
+        } catch (tokenError) {
+          console.error(tokenError);
+          alert("Erro ao adicionar token: " + tokenError.message);
+        }
+
+      } else {
+        alert("MetaMask não encontrada. Abra no navegador interno do MetaMask Mobile.");
+      }
+    }
+  </script>
+</head>
+<body>
+  <h1>Conectar MetaMask + Adicionar USDT</h1>
+  <button onclick="conectarMetamask()">Conectar e Configurar</button>
+</body>
+</html>
