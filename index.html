@@ -1,0 +1,106 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Token Swap Escrow DApp</title>
+  <script src="https://cdn.jsdelivr.net/npm/ethers/dist/ethers.min.js"></script>
+</head>
+<body>
+  <h2>Escrow com Troca de Tokens (ERC20 ↔ ERC20)</h2>
+
+  <button onclick="connectWallet()">Conectar MetaMask</button><br><br>
+
+  <label>Contrato Escrow: <input type="text" id="escrowAddress" /></label><br>
+  <label>Token do Comprador: <input type="text" id="tokenBuyer" /></label><br>
+  <label>Token do Vendedor: <input type="text" id="tokenSeller" /></label><br>
+  <label>Quantidade (em wei): <input type="number" id="amount" /></label><br><br>
+
+  <button onclick="checkStatus()">🔍 Verificar Status</button>
+  <p id="status"></p><br>
+
+  <button onclick="depositBuyer()">Depositar Comprador</button>
+  <button onclick="depositSeller()">Depositar Vendedor</button>
+  <button onclick="releaseSwap()">✅ Liberar Troca</button>
+  <button onclick="refundBuyer()">↩️ Reembolsar Comprador</button>
+  <button onclick="refundSeller()">↩️ Reembolsar Vendedor</button>
+
+  <script>
+    let provider, signer;
+
+    async function connectWallet() {
+      provider = new ethers.providers.Web3Provider(window.ethereum);
+      await provider.send("eth_requestAccounts", []);
+      signer = provider.getSigner();
+      alert("Conectado com sucesso!");
+    }
+
+    const escrowAbi = [
+      "function depositBuyer() external",
+      "function depositSeller() external",
+      "function releaseSwap() external",
+      "function refundBuyer() external",
+      "function refundSeller() external",
+      "function buyerDeposited() public view returns (bool)",
+      "function sellerDeposited() public view returns (bool)"
+    ];
+
+    async function getContract() {
+      const address = document.getElementById("escrowAddress").value;
+      return new ethers.Contract(address, escrowAbi, signer);
+    }
+
+    async function checkStatus() {
+      const escrow = await getContract();
+      const buyerDep = await escrow.buyerDeposited();
+      const sellerDep = await escrow.sellerDeposited();
+
+      const status = document.getElementById("status");
+      status.innerText = `Status: 
+Comprador ${buyerDep ? '✅ depositou' : '❌ não depositou'}, 
+Vendedor ${sellerDep ? '✅ depositou' : '❌ não depositou'}.`;
+    }
+
+    async function depositBuyer() {
+      const escrow = await getContract();
+      const tokenAddr = document.getElementById("tokenBuyer").value;
+      const amount = document.getElementById("amount").value;
+      const token = new ethers.Contract(tokenAddr, [
+        "function approve(address spender, uint256 amount) public returns (bool)"
+      ], signer);
+      await (await token.approve(escrow.address, amount)).wait();
+      await (await escrow.depositBuyer()).wait();
+      alert("Depósito do comprador feito!");
+    }
+
+    async function depositSeller() {
+      const escrow = await getContract();
+      const tokenAddr = document.getElementById("tokenSeller").value;
+      const amount = document.getElementById("amount").value;
+      const token = new ethers.Contract(tokenAddr, [
+        "function approve(address spender, uint256 amount) public returns (bool)"
+      ], signer);
+      await (await token.approve(escrow.address, amount)).wait();
+      await (await escrow.depositSeller()).wait();
+      alert("Depósito do vendedor feito!");
+    }
+
+    async function releaseSwap() {
+      const escrow = await getContract();
+      await (await escrow.releaseSwap()).wait();
+      alert("Troca realizada com sucesso!");
+    }
+
+    async function refundBuyer() {
+      const escrow = await getContract();
+      await (await escrow.refundBuyer()).wait();
+      alert("Reembolso do comprador feito!");
+    }
+
+    async function refundSeller() {
+      const escrow = await getContract();
+      await (await escrow.refundSeller()).wait();
+      alert("Reembolso do vendedor feito!");
+    }
+  </script>
+</body>
+</html>
